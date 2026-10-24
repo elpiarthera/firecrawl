@@ -12,9 +12,9 @@
   "license": "MIT",
   "dependencies": {
     "@mendable/firecrawl-js": "^4.3.4",
-    "axios": "^1.13.5",
+    "axios": "^1.20.0",
     "firecrawl": "^4.3.4",
-    "uuid": "^10.0.0",
+    "uuid": "^11.1.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {
