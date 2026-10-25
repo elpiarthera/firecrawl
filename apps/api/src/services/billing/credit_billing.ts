@@ -2,7 +2,10 @@ import { withAuth } from "../../lib/withAuth";
 import { logger } from "../../lib/logger";
 import { AuthCreditUsageChunk } from "../../controllers/v1/types";
 import { queueBillingOperation } from "./batch_billing";
-import { autumnService } from "../autumn/autumn.service";
+import {
+  autumnService,
+  featureIdForBillingEndpoint,
+} from "../autumn/autumn.service";
 import { toAutumnBillingProperties, type BillingMetadata } from "./types";
 import type { Logger } from "winston";
 
@@ -31,11 +34,13 @@ export async function billTeam(
         ...toAutumnBillingProperties(billing),
         apiKeyId: api_key_id,
       };
+      const featureId = featureIdForBillingEndpoint(billing.endpoint);
       const trackedInRequest = await autumnService.trackCredits({
         teamId: team_id,
         value: credits,
         properties: autumnProperties,
         requestScoped: true,
+        featureId,
       });
 
       const result = await queueBillingOperation(
@@ -53,6 +58,7 @@ export async function billTeam(
           teamId: team_id,
           value: credits,
           properties: autumnProperties,
+          featureId,
         });
       }
 
@@ -200,26 +206,6 @@ async function supaCheckTeamCredits(
   //       chunk,
   //     };
   //   }
-  // }
-
-  // TODO: Re-enable credit notifications once they are derived from Autumn balances
-  // instead of ACUC, which is no longer the source of truth.
-  // if (chunk.adjusted_credits_used > (chunk.total_credits_sum ?? 100000000)) {
-  //   sendNotification(
-  //     team_id,
-  //     NotificationType.LIMIT_REACHED,
-  //     chunk.sub_current_period_start,
-  //     chunk.sub_current_period_end,
-  //     chunk,
-  //   );
-  // } else if (creditUsagePercentage >= 0.8 && creditUsagePercentage < 1) {
-  //   sendNotification(
-  //     team_id,
-  //     NotificationType.APPROACHING_LIMIT,
-  //     chunk.sub_current_period_start,
-  //     chunk.sub_current_period_end,
-  //     chunk,
-  //   );
   // }
 
   // Compare the adjusted total credits used with the credits allowed by the plan (and graceful)

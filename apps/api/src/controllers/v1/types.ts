@@ -17,6 +17,7 @@ import { integrationSchema } from "../../utils/integration";
 import { includesFormat } from "../../lib/format-utils";
 import { webhookSchema } from "../../services/webhook/schema";
 import { BrandingProfile } from "../../types/branding";
+import { ProductProfile } from "../../types/product";
 
 type Format =
   | "markdown"
@@ -29,7 +30,8 @@ type Format =
   | "json"
   | "summary"
   | "changeTracking"
-  | "branding";
+  | "branding"
+  | "product";
 
 export const url = z.preprocess(
   x => {
@@ -334,7 +336,7 @@ const actionSchema = z.union([
   }),
   z.object({
     type: z.literal("scroll"),
-    direction: z.enum(["up", "down"]).optional().prefault("down"),
+    direction: z.enum(["up", "down"]).prefault("down"),
     selector: z.string().optional(),
   }),
   z.object({
@@ -429,9 +431,9 @@ const baseScrapeOptions = z.strictObject({
       "summary",
       "changeTracking",
       "branding",
+      "product",
     ])
     .array()
-    .optional()
     .prefault(["markdown"])
     .refine(
       x => !(x.includes("screenshot") && x.includes("screenshot@fullPage")),
@@ -484,7 +486,7 @@ const baseScrapeOptions = z.strictObject({
         .refine(val => validateSchemaForOpenAI(val), {
           message: OPENAI_SCHEMA_ERROR_MESSAGE,
         }),
-      modes: z.enum(["json", "git-diff"]).array().optional().prefault([]),
+      modes: z.enum(["json", "git-diff"]).array().prefault([]),
       tag: z.string().or(z.null()).prefault(null),
     })
     .optional(),
@@ -527,6 +529,7 @@ const baseScrapeOptions = z.strictObject({
   __searchPreviewToken: z.string().optional(),
   __experimental_omce: z.boolean().prefault(false).optional(),
   __experimental_omceDomain: z.string().optional(),
+  __forceFirePDF: z.boolean().prefault(false).optional(),
 });
 
 const fire1RefineOpts = {
@@ -719,7 +722,7 @@ const extractV1Options = z
     scrapeOptions: baseScrapeOptions
       .prefault({ onlyMainContent: false })
       .optional(),
-    origin: z.string().optional().prefault("api"),
+    origin: z.string().prefault("api"),
     integration: integrationSchema.optional().transform(val => val || null),
     urlTrace: z.boolean().prefault(false),
     timeout: z.int().positive().min(1000).prefault(60000),
@@ -782,7 +785,7 @@ const scrapeRequestSchemaBase = baseScrapeOptions
       .optional(),
     extract: extractOptionsWithAgent.optional(),
     jsonOptions: extractOptionsWithAgent.optional(),
-    origin: z.string().optional().prefault("api"),
+    origin: z.string().prefault("api"),
     integration: integrationSchema.optional().transform(val => val || null),
     timeout: z.int().positive().min(1000).prefault(30000),
     zeroDataRetention: z.boolean().optional(),
@@ -802,7 +805,7 @@ export type ScrapeRequestInput = z.input<typeof scrapeRequestSchema>;
 
 const batchScrapeRequestSchemaBase = baseScrapeOptions.extend({
   urls: url.array().min(1),
-  origin: z.string().optional().prefault("api"),
+  origin: z.string().prefault("api"),
   integration: integrationSchema.optional().transform(val => val || null),
   webhook: webhookSchema.optional(),
   appendToId: z.uuid().optional(),
@@ -820,7 +823,7 @@ export const batchScrapeRequestSchema = batchScrapeRequestSchemaBase
 
 const batchScrapeRequestSchemaNoURLValidationBase = baseScrapeOptions.extend({
   urls: z.string().array().min(1),
-  origin: z.string().optional().prefault("api"),
+  origin: z.string().prefault("api"),
   integration: integrationSchema.optional().transform(val => val || null),
   webhook: webhookSchema.optional(),
   appendToId: z.uuid().optional(),
@@ -855,7 +858,14 @@ const crawlerOptions = z.strictObject({
   deduplicateSimilarURLs: z.boolean().prefault(true),
   ignoreQueryParameters: z.boolean().prefault(false),
   regexOnFullURL: z.boolean().prefault(false),
-  delay: z.number().positive().optional(),
+  delay: z
+    .number()
+    .positive()
+    .max(
+      60,
+      "The delay parameter is measured in seconds and cannot exceed 60 seconds.",
+    )
+    .optional(),
 });
 
 // export type CrawlerOptions = {
@@ -873,7 +883,7 @@ type CrawlerOptions = z.infer<typeof crawlerOptions>;
 
 const crawlRequestSchemaBase = crawlerOptions.extend({
   url,
-  origin: z.string().optional().prefault("api"),
+  origin: z.string().prefault("api"),
   integration: integrationSchema.optional().transform(val => val || null),
   scrapeOptions: baseScrapeOptions.prefault(() => baseScrapeOptions.parse({})),
   webhook: webhookSchema.optional(),
@@ -943,7 +953,7 @@ const mapRequestSchemaBase = crawlerOptions
   .omit({ ignoreQueryParameters: true })
   .extend({
     url,
-    origin: z.string().optional().prefault("api"),
+    origin: z.string().prefault("api"),
     integration: integrationSchema.optional().transform(val => val || null),
     includeSubdomains: z.boolean().prefault(true),
     search: z.string().optional(),
@@ -984,6 +994,7 @@ export type Document = {
   json?: any;
   summary?: string;
   branding?: BrandingProfile;
+  product?: ProductProfile;
   warning?: string;
   actions?: {
     screenshots?: string[];
@@ -1264,6 +1275,9 @@ export type AuthCreditUsageChunk = {
     browser?: number;
     browserExecute?: number;
     account?: number;
+    supportAsk?: number;
+    supportDocsSearch?: number;
+    research?: number;
   };
   concurrency: number;
   flags: TeamFlags;
@@ -1280,12 +1294,13 @@ export type AuthCreditUsageChunk = {
 };
 
 export type TeamFlags = {
-  ignoreRobots?: boolean;
+  ignoreRobots?: "disabled" | "allowed" | "forced";
+  customRobotsAgent?: "disabled" | "allowed";
   unblockedDomains?: string[];
   forceZDR?: boolean;
   allowZDR?: boolean;
   scrapeZDR?: "disabled" | "allowed" | "forced";
-  searchZDR?: "disabled" | "allowed" | "forced";
+  searchZDR?: "disabled" | "allowed" | "forced" | "forced-zdr" | "forced-anon";
   zdrCost?: number;
   checkRobotsOnScrape?: boolean;
   crawlTtlHours?: number;
@@ -1295,6 +1310,12 @@ export type TeamFlags = {
   bypassCreditChecks?: boolean;
   debugBranding?: boolean;
   maxBrowserSessions?: number;
+  // POST /v2/search/:jobId/feedback returns 403 TEAM_OPTED_OUT when true.
+  searchFeedbackOptOut?: boolean;
+  researchBeta?: boolean;
+  highlightsBeta?: boolean;
+  // routes the team's new queue work to the FoundationDB backend
+  nuqFdb?: boolean;
 } | null;
 
 export type AuthCreditUsageChunkFromTeam = Omit<
@@ -1516,16 +1537,16 @@ export function toLegacyDocument(
 export const searchRequestSchema = z
   .strictObject({
     query: z.string(),
-    limit: z.int().positive().finite().max(100).optional().prefault(5),
+    limit: z.int().positive().finite().max(100).prefault(5),
     tbs: z.string().optional(),
     filter: z.string().optional(),
-    lang: z.string().optional().prefault("en"),
+    lang: z.string().prefault("en"),
     country: z.string().optional(),
     location: z.string().optional(),
-    origin: z.string().optional().prefault("api"),
+    origin: z.string().prefault("api"),
     integration: integrationSchema.optional().transform(val => val || null),
     timeout: z.int().positive().finite().prefault(60000),
-    ignoreInvalidURLs: z.boolean().optional().prefault(false),
+    ignoreInvalidURLs: z.boolean().prefault(false),
     __searchPreviewToken: z.string().optional(),
     scrapeOptions: baseScrapeOptions
       .extend({
@@ -1540,6 +1561,7 @@ export const searchRequestSchema = z
               "screenshot@fullPage",
               "extract",
               "json",
+              "product",
             ]),
           )
           .prefault([]),

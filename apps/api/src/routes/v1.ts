@@ -7,6 +7,7 @@ import { crawlStatusController } from "../controllers/v1/crawl-status";
 import { mapController } from "../controllers/v1/map";
 import { RequestWithAuth } from "../controllers/v1/types";
 import { RateLimiterMode } from "../types";
+import { SEARCH_CREDITS_FEATURE_ID } from "../services/autumn/autumn.service";
 import expressWs from "express-ws";
 import { crawlStatusWSController } from "../controllers/v1/crawl-status-ws";
 import { crawlCancelController } from "../controllers/v1/crawl-cancel";
@@ -33,6 +34,7 @@ import {
   countryCheck,
   idempotencyMiddleware,
   requestTimingMiddleware,
+  validateJobIdParam,
   wrap,
 } from "./shared";
 import { queueStatusController } from "../controllers/v1/queue-status";
@@ -45,6 +47,7 @@ import {
   createX402RouteConfig,
   isX402Enabled,
 } from "../lib/x402";
+import { deprecationMiddleware } from "../lib/deprecations";
 
 expressWs(express());
 
@@ -121,7 +124,7 @@ v1Router.use(requestTimingMiddleware("v1"));
 
 v1Router.post(
   "/scrape",
-  authMiddleware(RateLimiterMode.Scrape),
+  authMiddleware(RateLimiterMode.Scrape, { allowKeyless: true }),
   countryCheck,
   checkCreditsMiddleware(1),
   blocklistMiddleware,
@@ -150,9 +153,9 @@ v1Router.post(
 
 v1Router.post(
   "/search",
-  authMiddleware(RateLimiterMode.Search),
+  authMiddleware(RateLimiterMode.Search, { allowKeyless: true }),
   countryCheck,
-  checkCreditsMiddleware(),
+  checkCreditsMiddleware(undefined, SEARCH_CREDITS_FEATURE_ID),
   wrap(searchController),
 );
 
@@ -180,12 +183,14 @@ v1Router.get(
 v1Router.get(
   "/crawl/:jobId",
   authMiddleware(RateLimiterMode.CrawlStatus),
+  validateJobIdParam,
   wrap(crawlStatusController),
 );
 
 v1Router.get(
   "/batch/scrape/:jobId",
   authMiddleware(RateLimiterMode.CrawlStatus),
+  validateJobIdParam,
   // Yes, it uses the same controller as the normal crawl status controller
   wrap((req: any, res): any => crawlStatusController(req, res, true)),
 );
@@ -219,6 +224,7 @@ v1Router.ws("/crawl/:jobId", crawlStatusWSController);
 v1Router.post(
   "/extract",
   authMiddleware(RateLimiterMode.Extract),
+  deprecationMiddleware("v1_extract"),
   countryCheck,
   checkCreditsMiddleware(20),
   wrap(extractController),
@@ -227,12 +233,14 @@ v1Router.post(
 v1Router.get(
   "/extract/:jobId",
   authMiddleware(RateLimiterMode.ExtractStatus),
+  deprecationMiddleware("v1_extract_status"),
   wrap(extractStatusController),
 );
 
 v1Router.post(
   "/llmstxt",
   authMiddleware(RateLimiterMode.Scrape),
+  deprecationMiddleware("v1_llmstxt"),
   countryCheck,
   blocklistMiddleware,
   wrap(generateLLMsTextController),
@@ -241,12 +249,14 @@ v1Router.post(
 v1Router.get(
   "/llmstxt/:jobId",
   authMiddleware(RateLimiterMode.CrawlStatus),
+  deprecationMiddleware("v1_llmstxt_status"),
   wrap(generateLLMsTextStatusController),
 );
 
 v1Router.post(
   "/deep-research",
   authMiddleware(RateLimiterMode.Crawl),
+  deprecationMiddleware("v1_deep_research"),
   countryCheck,
   checkCreditsMiddleware(1),
   wrap(deepResearchController),
@@ -255,6 +265,7 @@ v1Router.post(
 v1Router.get(
   "/deep-research/:jobId",
   authMiddleware(RateLimiterMode.CrawlStatus),
+  deprecationMiddleware("v1_deep_research_status"),
   wrap(deepResearchStatusController),
 );
 

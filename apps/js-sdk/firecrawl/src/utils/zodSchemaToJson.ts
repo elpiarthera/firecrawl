@@ -1,6 +1,6 @@
+import { toJSONSchema } from "zod";
+import type { ZodType } from "zod";
 import { zodToJsonSchema as zodToJsonSchemaLib } from "zod-to-json-schema";
-
-type SchemaConverter = (schema: unknown) => unknown;
 
 export function isZodSchema(value: unknown): boolean {
   if (!value || typeof value !== "object") return false;
@@ -25,12 +25,9 @@ function tryZodV4Conversion(schema: unknown): Record<string, unknown> | null {
   if (!isZodV4Schema(schema)) return null;
 
   try {
-    const zodModule = (schema as Record<string, unknown>).constructor?.prototype?.constructor;
-    if (zodModule && typeof (zodModule as Record<string, unknown>).toJSONSchema === "function") {
-      return (zodModule as { toJSONSchema: SchemaConverter }).toJSONSchema(schema) as Record<string, unknown>;
-    }
+    return toJSONSchema(schema as ZodType) as Record<string, unknown>;
   } catch {
-    // V4 conversion not available
+    // Schema not representable as JSON Schema; fall back to the legacy converter.
   }
 
   return null;

@@ -1,7 +1,7 @@
 {
   "name": "playwright-scraper-api",
   "version": "1.0.0",
-  "description": "scraper api with playwright",
+  "description": "browser rendering service with playwright",
   "main": "api.ts",
   "scripts": {
     "start": "node dist/api.js",
@@ -28,7 +28,10 @@
   "pnpm": {
     "overrides": {
       "path-to-regexp@<8.4.0": ">=8.4.0",
-      "proxy-addr": "2.0.8"
+      "qs@<6.15.2": ">=6.15.2 <7.0.0",
+      "esbuild@>=0.17.0 <0.28.1": "0.28.1",
+      "body-parser@>=2.0.0 <2.4.0": ">=2.4.0 <3.0.0",
+      "proxy-addr@>=2.0.0 <2.0.8": ">=2.0.8 <3.0.0"
     }
   }
 }

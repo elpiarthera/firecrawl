@@ -18,7 +18,10 @@ import { _addScrapeJobToBullMQ } from "../../services/queue-jobs";
 import { logger as _logger } from "../../lib/logger";
 import { fromV1ScrapeOptions } from "../v2/types";
 import { checkPermissions } from "../../lib/permissions";
-import { crawlGroup } from "../../services/worker/nuq";
+import {
+  crawlGroup,
+  resolveNewGroupBackend,
+} from "../../services/worker/nuq-router";
 import { logRequest } from "../../services/logging/log_job";
 import { getScrapeZDR } from "../../lib/zdr-helpers";
 
@@ -29,7 +32,10 @@ export async function crawlController(
   const preNormalizedBody = req.body;
   req.body = crawlRequestSchema.parse(req.body);
 
-  const permissions = checkPermissions(req.body, req.acuc?.flags);
+  const permissions = checkPermissions(
+    { ...req.body, crawlerOptions: req.body },
+    req.acuc?.flags,
+  );
   if (permissions.error) {
     return res.status(403).json({
       success: false,
@@ -137,6 +143,8 @@ export async function crawlController(
           : req.body.maxConcurrency
         : undefined,
     zeroDataRetention,
+    v1: true,
+    webhook: req.body.webhook,
   };
 
   const crawler = crawlToCrawler(id, sc, req.acuc?.flags ?? null);
@@ -153,10 +161,16 @@ export async function crawlController(
     });
   }
 
+  sc.queueBackend = await resolveNewGroupBackend(sc.team_id);
   await crawlGroup.addGroup(
     id,
     sc.team_id,
     (req.acuc?.flags?.crawlTtlHours ?? 24) * 60 * 60 * 1000,
+    {
+      backend: sc.queueBackend,
+      maxConcurrency: sc.maxConcurrency,
+      delaySeconds: sc.crawlerOptions?.delay,
+    },
   );
 
   await saveCrawl(id, sc);
