@@ -33,7 +33,7 @@ run().catch((e) => {
 
 // old stuff:
 
-import { Firecrawl } from 'firecrawl';
+import { FirecrawlAppV1 as Firecrawl } from "firecrawl";
 import { z } from 'zod';
 
 const app = new Firecrawl({apiKey: "fc-YOUR_API_KEY"});

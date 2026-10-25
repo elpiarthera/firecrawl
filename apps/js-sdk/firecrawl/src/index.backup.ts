@@ -348,7 +348,7 @@ export interface ExtractParams<LLMSchema extends zt.ZodSchema = any> {
  * Response interface for extracting information from URLs.
  * Defines the structure of the response received after extracting information from URLs.
  */
-export interface ExtractResponse<LLMSchema extends zt.ZodSchema = any> {
+export interface ExtractResponse<LLMSchema = any> {
   success: boolean;
   data: LLMSchema;
   error?: string;
@@ -1251,7 +1251,7 @@ export default class FirecrawlApp {
         jsonSchema = undefined;
       } else {
         try {
-          jsonSchema = zodToJsonSchema(params.schema as zt.ZodType);
+          jsonSchema = zodToJsonSchema(params.schema as Parameters<typeof zodToJsonSchema>[0]);
         } catch (_) {
           jsonSchema = params.schema;
         }
@@ -1323,7 +1323,7 @@ export default class FirecrawlApp {
         jsonSchema = undefined;
       } else {
         try {
-          jsonSchema = zodToJsonSchema(params.schema as zt.ZodType);
+          jsonSchema = zodToJsonSchema(params.schema as Parameters<typeof zodToJsonSchema>[0]);
         } catch (_) {
           jsonSchema = params.schema;
         }

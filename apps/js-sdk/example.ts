@@ -36,7 +36,7 @@ run().catch((e) => {
 
 // old stuff:
 
-import { Firecrawl, CrawlStatusResponse, ErrorResponse } from 'firecrawl';
+import { FirecrawlAppV1 as Firecrawl, CrawlStatusResponse, ErrorResponse } from "firecrawl";
 
 const app = new Firecrawl({apiKey: "fc-YOUR_API_KEY"});
 

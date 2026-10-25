@@ -293,7 +293,7 @@ const actionSchema = z.union([
   }),
   z.object({
     type: z.literal("scroll"),
-    direction: z.enum(["up", "down"]).optional().prefault("down"),
+    direction: z.enum(["up", "down"]).prefault("down"),
     selector: z.string().optional(),
   }),
   z.object({
@@ -380,7 +380,7 @@ const changeTrackingFormatWithOptions = z.strictObject({
     .refine(val => validateSchemaForOpenAI(val), {
       message: OPENAI_SCHEMA_ERROR_MESSAGE,
     }),
-  modes: z.enum(["json", "git-diff"]).array().optional().prefault([]),
+  modes: z.enum(["json", "git-diff"]).array().prefault([]),
   tag: z.string().or(z.null()).prefault(null),
 });
 
@@ -639,7 +639,6 @@ const baseScrapeOptions = z.strictObject({
           z.strictObject({ type: z.literal("video") }),
         ])
         .array()
-        .optional()
         .prefault([{ type: "markdown" }]),
     )
     .refine(x => {
@@ -847,7 +846,7 @@ const extractOptions = z
     allowExternalLinks: z.boolean().prefault(false),
     enableWebSearch: z.boolean().prefault(false),
     scrapeOptions: baseScrapeOptions.optional(),
-    origin: z.string().optional().prefault("api"),
+    origin: z.string().prefault("api"),
     integration: integrationSchema.optional().transform(val => val || null),
     urlTrace: z.boolean().prefault(false),
     timeout: z.int().positive().min(1000).optional(),
@@ -917,7 +916,7 @@ export const agentRequestSchema = z.strictObject({
         });
       }
     }),
-  origin: z.string().optional().prefault("api"),
+  origin: z.string().prefault("api"),
   integration: integrationSchema.optional().transform(val => val || null),
   maxCredits: z.number().optional(),
   strictConstrainToURLs: z.boolean().optional(),
@@ -932,7 +931,7 @@ export type AgentRequest = z.infer<typeof agentRequestSchema>;
 
 const scrapeRequestSchemaBase = baseScrapeOptions.extend({
   url: URL,
-  origin: z.string().optional().prefault("api"),
+  origin: z.string().prefault("api"),
   integration: integrationSchema.optional().transform(val => val || null),
   zeroDataRetention: z.boolean().optional(),
   __agentInterop: z
@@ -988,7 +987,7 @@ const uploadedParseFileSchema = z.custom<UploadedParseFile>(
 );
 
 const parseRequestSchemaBase = baseScrapeOptions.extend({
-  origin: z.string().optional().prefault("api"),
+  origin: z.string().prefault("api"),
   integration: integrationSchema.optional().transform(val => val || null),
   zeroDataRetention: z.boolean().optional(),
   __agentInterop: z
@@ -1017,7 +1016,7 @@ export type ParseRequestInput = z.input<typeof parseRequestSchemaBase>;
 
 const batchScrapeRequestSchemaBase = baseScrapeOptions.extend({
   urls: URL.array().min(1),
-  origin: z.string().optional().prefault("api"),
+  origin: z.string().prefault("api"),
   integration: integrationSchema.optional().transform(val => val || null),
   webhook: webhookSchema.optional(),
   appendToId: z.uuid().optional(),
@@ -1041,7 +1040,7 @@ export const batchScrapeRequestSchema = strictWithMessage(
 
 const batchScrapeRequestSchemaNoURLValidationBase = baseScrapeOptions.extend({
   urls: z.string().array().min(1),
-  origin: z.string().optional().prefault("api"),
+  origin: z.string().prefault("api"),
   integration: integrationSchema.optional().transform(val => val || null),
   webhook: webhookSchema.optional(),
   appendToId: z.uuid().optional(),
@@ -1120,7 +1119,7 @@ type CrawlerOptions = z.infer<typeof crawlerOptions>;
 
 const crawlRequestSchemaBase = crawlerOptions.extend({
   url: URL,
-  origin: z.string().optional().prefault("api"),
+  origin: z.string().prefault("api"),
   integration: integrationSchema.optional().transform(val => val || null),
   scrapeOptions: baseScrapeOptions.prefault(() => baseScrapeOptions.parse({})),
   webhook: webhookSchema.optional(),
@@ -1162,7 +1161,7 @@ const mapRequestSchemaBase = crawlerOptions
   .omit({ sitemap: true, ignoreQueryParameters: true })
   .extend({
     url: URL,
-    origin: z.string().optional().prefault("api"),
+    origin: z.string().prefault("api"),
     integration: integrationSchema.optional().transform(val => val || null),
     includeSubdomains: z.boolean().prefault(true),
     ignoreQueryParameters: z.boolean().prefault(true),
@@ -1870,7 +1869,7 @@ const searchDomainSchema = z
 export const searchRequestSchema = z
   .strictObject({
     query: z.string(),
-    limit: z.int().positive().finite().max(100).optional().prefault(10),
+    limit: z.int().positive().finite().max(100).prefault(10),
     tbs: z.string().optional(),
     filter: z.string().optional(),
     sources: z
@@ -1886,7 +1885,6 @@ export const searchRequestSchema = z
           ]),
         ),
       ])
-      .optional()
       .prefault(["web"]),
     categories: z
       .union([
@@ -1904,19 +1902,19 @@ export const searchRequestSchema = z
       .optional(),
     includeDomains: z.array(searchDomainSchema).optional(),
     excludeDomains: z.array(searchDomainSchema).optional(),
-    lang: z.string().optional().prefault("en"),
+    lang: z.string().prefault("en"),
     enterprise: z.array(z.enum(["default", "anon", "zdr"])).optional(),
     country: z.string().optional(),
     location: z.string().optional(),
-    origin: z.string().optional().prefault("api"),
+    origin: z.string().prefault("api"),
     integration: integrationSchema.optional().transform(val => val || null),
     timeout: z.int().positive().finite().prefault(60000),
-    ignoreInvalidURLs: z.boolean().optional().prefault(false),
-    asyncScraping: z.boolean().optional().prefault(false),
+    ignoreInvalidURLs: z.boolean().prefault(false),
+    asyncScraping: z.boolean().prefault(false),
     // Experimental: replace each result's snippet with query-relevant
     // highlights pulled from our index (last 30 days), out-of-line from
     // scrapeURL. Falls back to the provider snippet when the URL isn't indexed.
-    highlights: z.boolean().optional().prefault(false),
+    highlights: z.boolean().prefault(false),
     __searchPreviewToken: z.string().optional(),
     scrapeOptions: baseScrapeOptions
       .extend({
@@ -1947,7 +1945,6 @@ export const searchRequestSchema = z
                 screenshotFormatWithOptions,
               ])
               .array()
-              .optional()
               .prefault([]),
           )
           .refine(x => {
@@ -2143,7 +2140,7 @@ export const searchFeedbackSchema = z
       .optional(),
     missingContent: z.array(missingContentEntrySchema).max(20).optional(),
     querySuggestions: z.string().trim().max(2000).optional(),
-    origin: z.string().optional().prefault("api"),
+    origin: z.string().prefault("api"),
     integration: integrationSchema.optional().transform(val => val || null),
   })
   .refine(data => hasSubstantiveSearchFeedback(data), {
@@ -2234,7 +2231,7 @@ export const endpointFeedbackSchema = z
     url: searchFeedbackUrlSchema.optional(),
     pageNumbers: z.array(z.number().int().positive()).max(100).optional(),
     metadata: feedbackMetadataSchema.optional(),
-    origin: z.string().optional().prefault("api"),
+    origin: z.string().prefault("api"),
     integration: integrationSchema.optional().transform(val => val || null),
   })
   .refine(
